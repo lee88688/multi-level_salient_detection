@@ -1,0 +1,8 @@
+# python
+*.py[cod]
+
+*.png
+*.txt
+.spyderproject
+
+.idea/
