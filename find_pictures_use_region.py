@@ -8,7 +8,7 @@ from skimage.feature import canny
 from scipy.ndimage.morphology import grey_dilation
 from sklearn import svm
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import f1_score, mean_absolute_error
+from sklearn.metrics import f1_score
 from skimage import io
 import numpy as np
 import cv2
@@ -16,7 +16,8 @@ import os
 import random
 import pickle
 from time import time
-from train_saliency import region_segment, feature_to_image, extract_region_features, up_sample
+from train_saliency import region_segment, extract_region_features, up_sample
+from save_features import feature_to_image
 from path import saliency_img_out_dir, saliency_feature_out_dir
 
 # features_path = os.getcwd() + os.sep + "features"
@@ -621,30 +622,28 @@ def product_saliency_image_use_cache_upsample(original_img_dir, binary_img_dir, 
         io.imsave(out_dir + os.sep + f.split(".")[0] + ".png", saliency_img)
 
 
-def product_saliency_image_use_cache_upsample2(original_img_dir, binary_img_dir, cache_dir, pic_list, c, extra):
+def product_saliency_image_use_cache_upsample2(train_cache_dir, general_cache_dir, cache_dir, img_dir, pic_list, c, extra):
     pic_num = len(pic_list)
-    feature, label = get_features_use_cache(cache_dir, pic_list=pic_list)
-    # train feature
-    clf = train_features(feature, label > 0.9, C=c)
-    # product saliency map
-    list_dir = os.listdir(cache_dir)
-    list_dir = filter(lambda f: os.path.splitext(f)[1] == '.npy', list_dir)
     out_dir = saliency_img_out_dir + str(pic_num) + '_' + str(c) + '_' + str(extra)
     if not os.path.exists(out_dir):
         os.mkdir(out_dir)
 
     segments_dir = cache_dir + "_segments"
-    # img_lab_dir = cache_dir + "_img_lab"
-    segments_mean_dir = cache_dir + "_segments_mean"
+    segments_mean_dir = general_cache_dir
     if not os.path.exists(cache_dir) or not os.path.exists(segments_dir):
         raise NameError('cache dir cannot be found!')
 
+    feature, label = get_features_use_cache(train_cache_dir, pic_list)
+    # train feature
+    clf = train_features(feature, label > 0.9, C=c)
+    # product saliency map
+    list_dir = os.listdir(cache_dir)
+    list_dir = filter(lambda f: os.path.splitext(f)[1] == '.npy', list_dir)
+
     for f in list_dir:
-        features = np.load(cache_out_dir + os.sep + f.split('.')[0] + '.npy')
-        # segments = np.load(segments_dir + os.sep + f.split('.')[0] + '.npy')
+        features = np.load(cache_dir + os.sep + f.split('.')[0] + '.npy')
         segments_mean = np.load(segments_mean_dir + os.sep + f.split('.')[0] + '.npy')
-        # img_lab = np.load(img_lab_dir + os.sep + f.split('.')[0] + '.npy')
-        img_lab = rgb2lab(io.imread(original_img_dir + os.sep + f.split('.')[0] + '.jpg'))
+        img_lab = rgb2lab(io.imread(img_dir + os.sep + f.split('.')[0] + '.jpg'))
 
         feature = features[:, 0:(features.shape[1] - 1)]
         predict_result = clf.predict_proba(feature)
@@ -680,7 +679,99 @@ def manifold_ranking_saliency(predicts, features, segments, neighbors):
 
     # predicts = normalize(predicts)
     mr_saliency = np.zeros_like(predicts)
+    mr_saliency[predicts > predicts.mean()] = 2
+
+    return normalize(np.dot(Aff, mr_saliency))
+
+
+def manifold_ranking_aff(features, segments, neighbors):
+    # get the surroundings of the surroundings of the superpixel
+    x = np.arange(neighbors.shape[0])
+    n = neighbors.copy()
+    for i in xrange(neighbors.shape[0]):
+        mask = np.any(neighbors[x[neighbors[i, :]], :], axis=0)
+        n[i, :] |= mask
+    neighbors = n
+    border_sp = np.unique(np.concatenate([segments[0, :], segments[segments.shape[0]-1, :], segments[:, 0], segments[:, segments.shape[1] - 1]]))
+    neighbors[np.eye(neighbors.shape[0], dtype=np.bool)] = True
+    neighbors[:, border_sp] = True
+
+    img_segments_mean = features[:, 0:3]
+    W = cdist(img_segments_mean, img_segments_mean)
+    W_max = W[neighbors].max()
+    W_min = W[neighbors].min()
+    W = np.exp(-(W - W_min) / ((W_max - W_min) * 0.05))
+    # W = np.exp(-W / (W_max * 0.1))
+    W[~neighbors] = 0
+    D = np.diag(W.sum(axis=1))
+    Aff = np.linalg.inv(D - 0.99 * W)
+    Aff[np.eye(Aff.shape[0], dtype=np.bool)] = 0
+
+    return Aff
+
+
+
+def manifold_ranking_saliency2(predicts, features, segments, neighbors, region_labels):
+    '''
+    use kmeans region to generate W
+    :param predicts:
+    :param features:
+    :param segments:
+    :param neighbors:
+    :return:
+    '''
+    normalize = lambda s: (s - s.min()) / (s.max() - s.min())
+
+    # get the kmeans region superpixels
+    for i in xrange(neighbors.shape[0]):
+        mask = region_labels == region_labels[i]
+        neighbors[i, mask] = True
+    border_sp = np.unique(np.concatenate([segments[0, :], segments[segments.shape[0]-1, :], segments[:, 0], segments[:, segments.shape[1] - 1]]))
+    neighbors[np.eye(neighbors.shape[0], dtype=np.bool)] = True
+    neighbors[:, border_sp] = True
+
+    # img_segments_mean = features[:, 0:3]
+    img_segments_mean = features
+    W = cdist(img_segments_mean, img_segments_mean)
+    W_max = W[neighbors].max()
+    W_min = W[neighbors].min()
+    W = np.exp(-(W - W_min) / ((W_max - W_min) * 0.05))
+    # W = np.exp(-W / (W_max * 0.1))
+    W[~neighbors] = 0
+    D = np.diag(W.sum(axis=1))
+    Aff = np.linalg.inv(D - 0.99 * W)
+    Aff[np.eye(Aff.shape[0], dtype=np.bool)] = 0
+
+    # predicts = normalize(predicts)
+    mr_saliency = np.zeros_like(predicts)
     mr_saliency[predicts > predicts.mean()] = 1
 
     return normalize(np.dot(Aff, mr_saliency))
 
+
+def manifold_ranking_saliency3(predicts, features):
+    '''
+    use all W
+    :param predicts:
+    :param features:
+    :param segments:
+    :param neighbors:
+    :return:
+    '''
+    normalize = lambda s: (s - s.min()) / (s.max() - s.min())
+
+    img_segments_mean = features[:, 0:3]
+    W = cdist(img_segments_mean, img_segments_mean)
+    W_max = W.max()
+    W_min = W.min()
+    W = np.exp(-(W - W_min) / ((W_max - W_min) * 0.05))
+    # W = np.exp(-W / (W_max * 0.1))
+    D = np.diag(W.sum(axis=1))
+    Aff = np.linalg.inv(D - 0.99 * W)
+    Aff[np.eye(Aff.shape[0], dtype=np.bool)] = 0
+
+    # predicts = normalize(predicts)
+    mr_saliency = np.zeros_like(predicts)
+    mr_saliency[predicts > predicts.mean()] = 1
+
+    return normalize(np.dot(Aff, mr_saliency))

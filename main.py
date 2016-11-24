@@ -48,21 +48,30 @@ def save_feature():
 
 
 def product_pictures():
+    pic_list = ['0_24_24918.npy', '0_11_11830.npy', '3_110_110864.npy', '0_22_22047.npy', '0_15_15859.npy']  # 4
+    pic_list = ['0_21_21413.npy', '1_40_40818.npy', '0_15_15620.npy', '2_86_86600.npy', '2_68_68619.npy']  # 5
+    pic_list = map(lambda s: s.split('.')[0] + '.jpg', pic_list);
+    product_saliency_image_use_cache(cache_out_dir5, cache_out_dir5, pic_list, 5, "ext5")
+    # product_saliency_feature_use_cache(cache_out_dir5, cache_out_dir5, pic_list, 1, "ext5")
+
+
+def product_pictures_upsample():
     pic_list = ['0_24_24918.npy', '0_11_11830.npy', '3_110_110864.npy', '0_22_22047.npy', '0_15_15859.npy']
     pic_list = map(lambda s: s.split('.')[0] + '.jpg', pic_list);
-    # product_saliency_image_use_cache(cache_out_dir, cache_out_dir, pic_list, 5, "region_300_local_surround_30k_2")
-    product_saliency_feature_use_cache(cache_out_dir, cache_out_dir, pic_list, 1, "region_300_local_surround")
+    product_saliency_image_use_cache_upsample2(cache_out_dir, general_cache_out_dir, cache_out_dir,
+                                               original_img_dir, pic_list, 1, "upsample")
 
 
 def mr_saliency():
     from random import shuffle
     predicts_dir = r'G:\Project\paper2\out\feature\out5_1_region_300_local_surround'
     images_dir = r'G:\Project\paper2\out\image\out'
-    predicts_to_images(predicts_dir, images_dir, cache_out_dir)
+    # predicts_to_images(predicts_dir, images_dir, cache_out_dir)
 
     features_dir = general_cache_out_dir
     segments_dir = general_cache_out_dir + "_segments"
     neighbor_dir = cache_out_dir + "_neighbor"
+    region_labels_dir = general_cache_out_dir + "_region_labels"
 
     mr_images_dir = images_dir + "_mr"
     if not os.path.exists(mr_images_dir):
@@ -74,22 +83,30 @@ def mr_saliency():
         feature = np.load(features_dir + os.sep + f)
         segments = np.load(segments_dir + os.sep + f)
         neighbor = np.load(neighbor_dir + os.sep + f)
+        region_labels = np.load(region_labels_dir + os.sep + f)
         io.imshow(feature_to_image(predict, segments))
         io.show()
+        # io.imshow(feature_to_image(predict > predict.mean(), segments))
+        # io.show()
         io.imshow(feature_to_image(manifold_ranking_saliency(predict, feature, segments, neighbor), segments))
         io.show()
+        # io.imshow(feature_to_image(manifold_ranking_saliency2(predict, feature, segments, neighbor, region_labels), segments))
+        # io.show()
+        # io.imshow(feature_to_image(manifold_ranking_saliency3(predict, feature), segments))
+        # io.show()
 
 
 def mr_saliency_save():
-    predicts_dir = r'G:\Project\paper2\out\feature\out5_1_region_300_local_surround'
+    predicts_dir = r'G:\Project\paper2\out\feature\out5_1_ext5'
     images_dir = r'G:\Project\paper2\out\image\out'
     # predicts_to_images(predicts_dir, images_dir, cache_out_dir)
 
-    features_dir = general_cache_out_dir
+    features_dir = cache_out_dir5
     segments_dir = general_cache_out_dir + "_segments"
-    neighbor_dir = cache_out_dir + "_neighbor"
+    neighbor_dir = cache_out_dir5 + "_neighbor"
+    region_labels_dir = general_cache_out_dir + "_region_labels"
 
-    mr_images_dir = images_dir + "_mr5"
+    mr_images_dir = images_dir + "_mr3"
     if not os.path.exists(mr_images_dir):
         os.mkdir(mr_images_dir)
     list_dir = filter(lambda s: s.split('.')[-1] == 'npy', os.listdir(predicts_dir))
@@ -99,11 +116,65 @@ def mr_saliency_save():
         feature = np.load(features_dir + os.sep + f)
         segments = np.load(segments_dir + os.sep + f)
         neighbor = np.load(neighbor_dir + os.sep + f)
-        io.imsave(mr_images_dir + os.sep + f.split('.')[0] + ".png", feature_to_image(manifold_ranking_saliency(predict, feature, segments, neighbor), segments))
+        region_labels = np.load(region_labels_dir + os.sep + f)
+        img = feature_to_image(manifold_ranking_saliency2(predict, feature[:, 0:-1], segments, neighbor, region_labels), segments)
+        io.imsave(mr_images_dir + os.sep + f.split('.')[0] + ".png", img)
+
+
+def mr_original():
+    normalize = lambda s: (s - s.min()) / (s.max() - s.min())
+
+    predicts_dir = r'G:\Project\paper2\out\feature\out5_1_region_300_local_surround'
+    images_dir = r'G:\Project\paper2\out\image\out'
+    # predicts_to_images(predicts_dir, images_dir, cache_out_dir)
+
+    features_dir = general_cache_out_dir
+    segments_dir = general_cache_out_dir + "_segments"
+    neighbor_dir = cache_out_dir + "_neighbor"
+    region_labels_dir = general_cache_out_dir + "_region_labels"
+
+    list_dir = filter(lambda s: s.split('.')[-1] == 'npy', os.listdir(predicts_dir))
+    for f in list_dir[0:1]:
+        predict = np.load(predicts_dir + os.sep + f)
+        feature = np.load(features_dir + os.sep + f)
+        segments = np.load(segments_dir + os.sep + f)
+        neighbor = np.load(neighbor_dir + os.sep + f)
+
+        Aff = manifold_ranking_aff(feature, segments, neighbor)
+
+        salt = np.arange(neighbor.shape[0])
+        salt[np.unique(segments[0, :])] = 1
+        salt = 1- normalize(np.dot(Aff, salt))
+
+        sald = np.arange(neighbor.shape[0])
+        sald[np.unique(segments[segments.shape[0] - 1, :])] = 1
+        sald = 1 - normalize(np.dot(Aff, sald))
+
+        sall = np.arange(neighbor.shape[0])
+        sall[np.unique(segments[:, 0])] = 1
+        sall = 1 - normalize(np.dot(Aff, sall))
+
+        salr = np.arange(neighbor.shape[0])
+        salr[np.unique(segments[:, segments.shape[1] - 1])] = 1
+        salr = 1 - normalize(np.dot(Aff, salr))
+
+        sal = salt * sald * sall * salr
+        s = np.arange(neighbor.shape[0])
+        s[sal > sal.mean()] = 1
+        s = normalize(np.dot(Aff, s))
+
+        l = [salt, sald, sall, salr, s]
+        for i in l:
+            img = feature_to_image(i, segments)
+            io.imshow(img)
+            io.show()
+        
+        return l
+
 
 
 if __name__ == "__main__":
-    save_feature()
+    mr_saliency_save()
 
 
 

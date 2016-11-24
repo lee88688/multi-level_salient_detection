@@ -1756,7 +1756,7 @@ def recreate_cache_file(name_list, original_img_dir, binary_img_dir, cache_dir):
         np.save(region_labels_dir + os.sep + os.path.splitext(f)[0] + '.npy', labels.astype(np.int16))
 
 
-def feature_to_image(feature, segments, enhance=False):
+def feature_to_image(feature, segments, enhance=False, binary=False):
     normalize = lambda s: (s - s.min()) / (s.max() - s.min())
 
     max_segments = segments.max() + 1
@@ -1770,6 +1770,9 @@ def feature_to_image(feature, segments, enhance=False):
             feature[mask] = 0
             feature[mask] = feature.max()
         feature = normalize(feature)
+
+    if binary:
+        feature = feature > feature.mean()
 
     feature_img = np.zeros_like(segments, dtype=np.float64)
 
