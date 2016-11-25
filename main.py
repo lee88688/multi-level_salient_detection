@@ -64,13 +64,13 @@ def product_pictures_upsample():
 
 def mr_saliency():
     from random import shuffle
-    predicts_dir = r'G:\Project\paper2\out\feature\out5_1_region_300_local_surround'
+    predicts_dir = r'G:\Project\paper2\out\feature\out5_1_ext5'
     images_dir = r'G:\Project\paper2\out\image\out'
     # predicts_to_images(predicts_dir, images_dir, cache_out_dir)
 
-    features_dir = general_cache_out_dir
+    features_dir = cache_out_dir5
     segments_dir = general_cache_out_dir + "_segments"
-    neighbor_dir = cache_out_dir + "_neighbor"
+    neighbor_dir = cache_out_dir5 + "_neighbor"
     region_labels_dir = general_cache_out_dir + "_region_labels"
 
     mr_images_dir = images_dir + "_mr"
@@ -88,12 +88,12 @@ def mr_saliency():
         io.show()
         # io.imshow(feature_to_image(predict > predict.mean(), segments))
         # io.show()
-        io.imshow(feature_to_image(manifold_ranking_saliency(predict, feature, segments, neighbor), segments))
-        io.show()
+        # io.imshow(feature_to_image(manifold_ranking_saliency(predict, feature, segments, neighbor), segments))
+        # io.show()
         # io.imshow(feature_to_image(manifold_ranking_saliency2(predict, feature, segments, neighbor, region_labels), segments))
         # io.show()
-        # io.imshow(feature_to_image(manifold_ranking_saliency3(predict, feature), segments))
-        # io.show()
+        io.imshow(feature_to_image(manifold_ranking_saliency3(predict, feature[:, 0:-1], segments, neighbor), segments))
+        io.show()
 
 
 def mr_saliency_save():
@@ -106,7 +106,7 @@ def mr_saliency_save():
     neighbor_dir = cache_out_dir5 + "_neighbor"
     region_labels_dir = general_cache_out_dir + "_region_labels"
 
-    mr_images_dir = images_dir + "_mr3"
+    mr_images_dir = images_dir + "_mr4"
     if not os.path.exists(mr_images_dir):
         os.mkdir(mr_images_dir)
     list_dir = filter(lambda s: s.split('.')[-1] == 'npy', os.listdir(predicts_dir))
@@ -133,48 +133,47 @@ def mr_original():
     neighbor_dir = cache_out_dir + "_neighbor"
     region_labels_dir = general_cache_out_dir + "_region_labels"
 
+    mr_images_dir = images_dir + "_mr5"
+    if not os.path.exists(mr_images_dir):
+        os.mkdir(mr_images_dir)
     list_dir = filter(lambda s: s.split('.')[-1] == 'npy', os.listdir(predicts_dir))
-    for f in list_dir[0:1]:
+    for f in list_dir:
         predict = np.load(predicts_dir + os.sep + f)
         feature = np.load(features_dir + os.sep + f)
         segments = np.load(segments_dir + os.sep + f)
         neighbor = np.load(neighbor_dir + os.sep + f)
+        region_labels = np.load(region_labels_dir + os.sep + f)
 
-        Aff = manifold_ranking_aff(feature, segments, neighbor)
+        Aff = manifold_ranking_aff(feature[:, 0:3], segments, neighbor)
 
-        salt = np.arange(neighbor.shape[0])
+        salt = np.zeros(neighbor.shape[0])
         salt[np.unique(segments[0, :])] = 1
         salt = 1- normalize(np.dot(Aff, salt))
 
-        sald = np.arange(neighbor.shape[0])
+        sald = np.zeros(neighbor.shape[0])
         sald[np.unique(segments[segments.shape[0] - 1, :])] = 1
         sald = 1 - normalize(np.dot(Aff, sald))
 
-        sall = np.arange(neighbor.shape[0])
+        sall = np.zeros(neighbor.shape[0])
         sall[np.unique(segments[:, 0])] = 1
         sall = 1 - normalize(np.dot(Aff, sall))
 
-        salr = np.arange(neighbor.shape[0])
+        salr = np.zeros(neighbor.shape[0])
         salr[np.unique(segments[:, segments.shape[1] - 1])] = 1
         salr = 1 - normalize(np.dot(Aff, salr))
 
         sal = salt * sald * sall * salr
-        s = np.arange(neighbor.shape[0])
+        s = np.zeros(neighbor.shape[0])
         s[sal > sal.mean()] = 1
         s = normalize(np.dot(Aff, s))
 
-        l = [salt, sald, sall, salr, s]
-        for i in l:
-            img = feature_to_image(i, segments)
-            io.imshow(img)
-            io.show()
-        
-        return l
+        io.imsave(mr_images_dir + os.sep + f.split('.')[0] + '.png', feature_to_image(s, segments))
+        # return l
 
 
 
 if __name__ == "__main__":
-    mr_saliency_save()
+    mr_original()
 
 
 

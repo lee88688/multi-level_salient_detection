@@ -693,14 +693,16 @@ def manifold_ranking_aff(features, segments, neighbors):
         n[i, :] |= mask
     neighbors = n
     border_sp = np.unique(np.concatenate([segments[0, :], segments[segments.shape[0]-1, :], segments[:, 0], segments[:, segments.shape[1] - 1]]))
-    neighbors[np.eye(neighbors.shape[0], dtype=np.bool)] = True
-    neighbors[:, border_sp] = True
+    for i in border_sp:
+        neighbors[i, border_sp] = True
+    # neighbors |= neighbors.T
+    neighbors[np.eye(neighbors.shape[0], dtype=np.bool)] = False
 
-    img_segments_mean = features[:, 0:3]
+    img_segments_mean = features
     W = cdist(img_segments_mean, img_segments_mean)
     W_max = W[neighbors].max()
     W_min = W[neighbors].min()
-    W = np.exp(-(W - W_min) / ((W_max - W_min) * 0.05))
+    W = np.exp(-(W - W_min) / ((W_max - W_min) * 0.1))
     # W = np.exp(-W / (W_max * 0.1))
     W[~neighbors] = 0
     D = np.diag(W.sum(axis=1))
@@ -709,6 +711,72 @@ def manifold_ranking_aff(features, segments, neighbors):
 
     return Aff
 
+
+def manifold_ranking_aff2(features, segments, neighbors):
+    '''
+    use paper matlab code method
+    :param features:
+    :param segments:
+    :param neighbors:
+    :return:
+    '''
+    # neighbors |= neighbors.T
+    border_sp = np.unique(np.concatenate([segments[0, :], segments[segments.shape[0]-1, :], segments[:, 0], segments[:, segments.shape[1] - 1]]))
+    for i in border_sp:
+        neighbors[i, border_sp] = True
+    neighbors[np.eye(neighbors.shape[0], dtype=np.bool)] = False
+
+    img_segments_mean = features
+    W = cdist(img_segments_mean, img_segments_mean)
+    W_max = W[neighbors].max()
+    W_min = W[neighbors].min()
+    W = np.exp(-(W - W_min) / ((W_max - W_min) * 0.1))
+    # W = np.exp(-W / (W_max * 0.1))
+    W[~neighbors] = 0
+    D = np.diag(W.sum(axis=0))
+    Aff = np.linalg.inv(D - 0.99 * W)
+    Aff[np.eye(Aff.shape[0], dtype=np.bool)] = 0
+
+    return Aff
+
+
+def manifold_ranking_aff3(features, segments, neighbors, region_labels):
+    '''
+    adjacency matrix use surrounding and the region superpixels
+    :param features:
+    :param segments:
+    :param neighbors:
+    :return:
+    '''
+    # get the surroundings of the surroundings of the superpixel
+    x = np.arange(neighbors.shape[0])
+    n = neighbors.copy()
+    for i in xrange(neighbors.shape[0]):
+        mask = np.any(neighbors[x[neighbors[i, :]], :], axis=0)
+        n[i, :] |= mask
+    neighbors = n
+    # get the kmeans region superpixels
+    for i in xrange(neighbors.shape[0]):
+        mask = region_labels == region_labels[i]
+        neighbors[i, mask] = True
+    border_sp = np.unique(np.concatenate([segments[0, :], segments[segments.shape[0]-1, :], segments[:, 0], segments[:, segments.shape[1] - 1]]))
+    for i in border_sp:
+        neighbors[i, border_sp] = True
+    neighbors |= neighbors.T
+    neighbors[np.eye(neighbors.shape[0], dtype=np.bool)] = False
+
+    img_segments_mean = features
+    W = cdist(img_segments_mean, img_segments_mean)
+    W_max = W[neighbors].max()
+    W_min = W[neighbors].min()
+    W = np.exp(-(W - W_min) / ((W_max - W_min) * 0.1))
+    # W = np.exp(-W / (W_max * 0.1))
+    W[~neighbors] = 0
+    D = np.diag(W.sum(axis=0))
+    Aff = np.linalg.inv(D - 0.99 * W)
+    Aff[np.eye(Aff.shape[0], dtype=np.bool)] = 0
+
+    return Aff
 
 
 def manifold_ranking_saliency2(predicts, features, segments, neighbors, region_labels):
@@ -749,9 +817,9 @@ def manifold_ranking_saliency2(predicts, features, segments, neighbors, region_l
     return normalize(np.dot(Aff, mr_saliency))
 
 
-def manifold_ranking_saliency3(predicts, features):
+def manifold_ranking_saliency3(predicts, features, segments, neighbors):
     '''
-    use all W
+    use paper matlab code method Aff
     :param predicts:
     :param features:
     :param segments:
@@ -760,15 +828,7 @@ def manifold_ranking_saliency3(predicts, features):
     '''
     normalize = lambda s: (s - s.min()) / (s.max() - s.min())
 
-    img_segments_mean = features[:, 0:3]
-    W = cdist(img_segments_mean, img_segments_mean)
-    W_max = W.max()
-    W_min = W.min()
-    W = np.exp(-(W - W_min) / ((W_max - W_min) * 0.05))
-    # W = np.exp(-W / (W_max * 0.1))
-    D = np.diag(W.sum(axis=1))
-    Aff = np.linalg.inv(D - 0.99 * W)
-    Aff[np.eye(Aff.shape[0], dtype=np.bool)] = 0
+    Aff = manifold_ranking_aff(features, segments, neighbors)
 
     # predicts = normalize(predicts)
     mr_saliency = np.zeros_like(predicts)
