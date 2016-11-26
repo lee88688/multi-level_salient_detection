@@ -2,10 +2,12 @@
 
 from multiprocessing import Process, freeze_support, Value
 from sendmail import send_mail
-from save_features import *
-from find_pictures_use_region import *
+import find_pictures_use_region as fp
+import save_features as sf
+import numpy as np
 from path import *
 from time import time
+from skimage import io
 
 
 def find_pictures():
@@ -13,9 +15,9 @@ def find_pictures():
 
     max_score = Value('d', 0.0)
     # print_max_score_multiprocess(max_score, dut_cache_out_dir, 10000, 5, 10)
-    p1 = Process(target=print_max_score_multiprocess, args=(max_score, cache_out_dir5, 10000, 5, 1))
-    p2 = Process(target=print_max_score_multiprocess, args=(max_score, cache_out_dir5, 10000, 5, 1))
-    p3 = Process(target=print_max_score_multiprocess, args=(max_score, cache_out_dir5, 10000, 5, 1))
+    p1 = Process(target=fp.print_max_score_multiprocess, args=(max_score, cache_out_dir5, 10000, 5, 1))
+    p2 = Process(target=fp.print_max_score_multiprocess, args=(max_score, cache_out_dir5, 10000, 5, 1))
+    p3 = Process(target=fp.print_max_score_multiprocess, args=(max_score, cache_out_dir5, 10000, 5, 1))
     p1.start()
     p2.start()
     p3.start()
@@ -40,7 +42,7 @@ def save_feature():
     # save_features_from_general_cache4(original_img_dir, general300_cache_out_dir, cache_out_dir, 'jpg')
     # save_features_from_general_cache4(dut_original_img_dir, dut_general300_cache_out_dir, dut_cache_out_dir, 'jpg')
 
-    save_features_from_general_cache5(original_img_dir, general300_cache_out_dir, cache_out_dir5, 'jpg')
+    sf.save_features_from_general_cache5(original_img_dir, general300_cache_out_dir, cache_out_dir5, 'jpg')
 
     stop = time()
     print "total time is: " + str(stop - start)
@@ -52,12 +54,35 @@ def save_feature_multiprocess():
 
     list_features_dir = os.listdir(original_img_dir)
     pics = filter(lambda f: f.split('.')[-1] == "jpg", list_features_dir)
-    p1 = Process(target=save_general_features_multiprocess, args=(pics[0:len(pics)/2], original_img_dir, binary_img_dir, general300_cache_out_dir, 300, 'jpg', 'bmp'))
-    p2 = Process(target=save_general_features_multiprocess, args=(pics[len(pics)/2:], original_img_dir, binary_img_dir, general300_cache_out_dir, 300, 'jpg', 'bmp'))
+    p1 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[0:len(pics)/4], original_img_dir, general300_cache_out_dir, cache_out_dir, 'jpg'))
+    p2 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[len(pics)/4:len(pics)*2/4],original_img_dir, general300_cache_out_dir, cache_out_dir, 'jpg'))
+    p3 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[len(pics)*2/4:len(pics)*3/4],original_img_dir, general300_cache_out_dir, cache_out_dir, 'jpg'))
+    p4 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[len(pics)*3/4:],original_img_dir, general300_cache_out_dir, cache_out_dir, 'jpg'))
     p1.start()
     p2.start()
+    p3.start()
+    p4.start()
     p1.join()
     p2.join()
+    p3.join()
+    p4.join()
+
+    # list_features_dir = os.listdir(original_img_dir)
+    # pics = filter(lambda f: f.split('.')[-1] == "jpg", list_features_dir)
+    # pics = ["0_11_11179.jpg"]
+    # sf.save_features_from_general_cache_multiprocess(pics, original_img_dir, general300_cache_out_dir, cache_out_dir, 'jpg')
+    # p1 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[0:len(pics)/4], original_img_dir, general300_cache_out_dir, cache_out_dir, 'jpg'))
+    # p2 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[len(pics)/4:len(pics)*2/4],original_img_dir, general300_cache_out_dir, cache_out_dir, 'jpg'))
+    # p3 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[len(pics)*2/4:len(pics)*3/4],original_img_dir, general300_cache_out_dir, cache_out_dir, 'jpg'))
+    # p4 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[len(pics)*3/4:],original_img_dir, general300_cache_out_dir, cache_out_dir, 'jpg'))
+    # p1.start()
+    # p2.start()
+    # p3.start()
+    # p4.start()
+    # p1.join()
+    # p2.join()
+    # p3.join()
+    # p4.join()
 
     stop = time()
     print "total time is: " + str(stop - start)
@@ -67,14 +92,14 @@ def product_pictures():
     pic_list = ['0_24_24918.npy', '0_11_11830.npy', '3_110_110864.npy', '0_22_22047.npy', '0_15_15859.npy']  # 4
     pic_list = ['0_21_21413.npy', '1_40_40818.npy', '0_15_15620.npy', '2_86_86600.npy', '2_68_68619.npy']  # 5
     pic_list = map(lambda s: s.split('.')[0] + '.jpg', pic_list);
-    product_saliency_image_use_cache(cache_out_dir5, cache_out_dir5, pic_list, 5, "ext5")
+    fp.product_saliency_image_use_cache(cache_out_dir5, cache_out_dir5, pic_list, 5, "ext5")
     # product_saliency_feature_use_cache(cache_out_dir5, cache_out_dir5, pic_list, 1, "ext5")
 
 
 def product_pictures_upsample():
     pic_list = ['0_24_24918.npy', '0_11_11830.npy', '3_110_110864.npy', '0_22_22047.npy', '0_15_15859.npy']
     pic_list = map(lambda s: s.split('.')[0] + '.jpg', pic_list);
-    product_saliency_image_use_cache_upsample2(cache_out_dir, general_cache_out_dir, cache_out_dir,
+    fp.product_saliency_image_use_cache_upsample2(cache_out_dir, general_cache_out_dir, cache_out_dir,
                                                original_img_dir, pic_list, 1, "upsample")
 
 
@@ -100,7 +125,7 @@ def mr_saliency():
         segments = np.load(segments_dir + os.sep + f)
         neighbor = np.load(neighbor_dir + os.sep + f)
         region_labels = np.load(region_labels_dir + os.sep + f)
-        io.imshow(feature_to_image(predict, segments))
+        io.imshow(fp.feature_to_image(predict, segments))
         io.show()
         # io.imshow(feature_to_image(predict > predict.mean(), segments))
         # io.show()
@@ -108,7 +133,7 @@ def mr_saliency():
         # io.show()
         # io.imshow(feature_to_image(manifold_ranking_saliency2(predict, feature, segments, neighbor, region_labels), segments))
         # io.show()
-        io.imshow(feature_to_image(manifold_ranking_saliency3(predict, feature[:, 0:-1], segments, neighbor), segments))
+        io.imshow(fp.feature_to_image(fp.manifold_ranking_saliency3(predict, feature[:, 0:-1], segments, neighbor), segments))
         io.show()
 
 
@@ -133,7 +158,7 @@ def mr_saliency_save():
         segments = np.load(segments_dir + os.sep + f)
         neighbor = np.load(neighbor_dir + os.sep + f)
         region_labels = np.load(region_labels_dir + os.sep + f)
-        img = feature_to_image(manifold_ranking_saliency2(predict, feature[:, 0:-1], segments, neighbor, region_labels), segments)
+        img = fp.feature_to_image(fp.manifold_ranking_saliency2(predict, feature[:, 0:-1], segments, neighbor, region_labels), segments)
         io.imsave(mr_images_dir + os.sep + f.split('.')[0] + ".png", img)
 
 
@@ -160,11 +185,11 @@ def mr_original():
         neighbor = np.load(neighbor_dir + os.sep + f)
         region_labels = np.load(region_labels_dir + os.sep + f)
 
-        Aff = manifold_ranking_aff(feature[:, 0:3], segments, neighbor.copy())
+        Aff = fp.manifold_ranking_aff(feature[:, 0:3], segments, neighbor.copy())
 
         salt = np.zeros(neighbor.shape[0])
         salt[np.unique(segments[0, :])] = 1
-        salt = 1- normalize(np.dot(Aff, salt))
+        salt = 1 - normalize(np.dot(Aff, salt))
 
         sald = np.zeros(neighbor.shape[0])
         sald[np.unique(segments[segments.shape[0] - 1, :])] = 1
@@ -183,7 +208,7 @@ def mr_original():
         s[sal > sal.mean()] = 1
         s = normalize(np.dot(Aff, s))
 
-        io.imsave(mr_images_dir + os.sep + f.split('.')[0] + '.png', feature_to_image(s, segments))
+        io.imsave(mr_images_dir + os.sep + f.split('.')[0] + '.png', fp.feature_to_image(s, segments))
         # return l
 
 

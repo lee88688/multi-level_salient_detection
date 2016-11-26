@@ -17,7 +17,7 @@ import random
 import pickle
 from time import time
 from train_saliency import region_segment, extract_region_features, up_sample
-from save_features import feature_to_image
+import save_features as sf
 from path import saliency_img_out_dir, saliency_feature_out_dir
 
 # features_path = os.getcwd() + os.sep + "features"
@@ -362,7 +362,7 @@ def test_image_use_region(clf, img_name, cache_dir, original_img_dir):
 
     saliency_img =  predict_result[:, 1] + region_feature[:, 2]
     saliency_img = normalize(saliency_img)
-    return feature_to_image(saliency_img, segments)
+    return sf.feature_to_image(saliency_img, segments)
 
 
 
