@@ -1552,6 +1552,21 @@ def preprocess_binary_image(binary_image):
     return arr > (arr.max() / 2)
 
 
+def preprocess_binary_image_frame(binary_image, frame):
+    '''
+    this function deals with binary image array
+    :param binary_image:
+    :param frame: frame array
+    :return:
+    '''
+    # arr = None
+    if len(binary_image.shape) > 2:
+        arr = color.rgb2gray(binary_image)
+    else:
+        arr = binary_image
+    return (arr > (arr.max() / 2))[frame[2]:frame[3], frame[4]:frame[5]]
+
+
 def save_general_features_kmeans(original_img_dir, binary_img_dir, cache_dir, segments_number=300, original_img_ext='jpg', binary_img_ext='bmp'):
     if (not os.path.exists(original_img_dir)) and not (os.path.exists(binary_img_dir)):
         raise NameError("Path does not exits, check out!")
@@ -1581,6 +1596,106 @@ def save_general_features_kmeans(original_img_dir, binary_img_dir, cache_dir, se
         binary_arr = preprocess_binary_image(io.imread(binary_img_path_name))
         features, region_features, segments, region_segments, labels = extract_general_features_kmeans(img, binary_arr, segments_number=segments_number)
         np.save(cache_dir + os.sep + os.path.splitext(f)[0] + '.npy', features.astype(np.float32))
+        np.save(region_features_dir + os.sep + os.path.splitext(f)[0] + '.npy', region_features.astype(np.float32))
+        np.save(segments_dir + os.sep + os.path.splitext(f)[0] + '.npy', segments.astype(np.int16))
+        np.save(region_segments_dir + os.sep + os.path.splitext(f)[0] + '.npy', region_segments.astype(np.int16))
+        np.save(region_labels_dir + os.sep + os.path.splitext(f)[0] + '.npy', labels.astype(np.int16))
+
+
+def save_general_features_kmeans2(original_img_dir, binary_img_dir, cache_dir, segments_number=300, original_img_ext='jpg', binary_img_ext='bmp'):
+    '''
+    this function add remove_frame function, and save the frame info to general cache dir
+    :param original_img_dir:
+    :param binary_img_dir:
+    :param cache_dir:
+    :param segments_number:
+    :param original_img_ext:
+    :param binary_img_ext:
+    :return:
+    '''
+    if (not os.path.exists(original_img_dir)) and not (os.path.exists(binary_img_dir)):
+        raise NameError("Path does not exits, check out!")
+    # check out features_dir
+    if not os.path.exists(cache_dir):
+        os.mkdir(cache_dir)
+    region_features_dir = cache_dir + "_region"
+    if not os.path.exists(region_features_dir):
+        os.mkdir(region_features_dir)
+    segments_dir = cache_dir + "_segments"
+    if not os.path.exists(segments_dir):
+        os.mkdir(segments_dir)
+    region_segments_dir = cache_dir + "_region_segments"
+    if not os.path.exists(region_segments_dir):
+        os.mkdir(region_segments_dir)
+    region_labels_dir = cache_dir + "_region_labels"
+    if not os.path.exists(region_labels_dir):
+        os.mkdir(region_labels_dir)
+    frame_info_dir = cache_dir + "_frame_info"
+    if not os.path.exists(frame_info_dir):
+        os.mkdir(frame_info_dir)
+
+    list_features_dir = os.listdir(original_img_dir)
+    list_features_dir = filter(lambda f: f.split('.')[-1] == original_img_ext, list_features_dir)
+
+    for f in list_features_dir:
+        img_path_name = original_img_dir + os.sep + f
+        binary_img_path_name = binary_img_dir + os.sep + os.path.splitext(f)[0] + '.' + binary_img_ext
+        img = io.imread(img_path_name)
+        img, frame_info = remove_frame(img)
+        binary_arr = preprocess_binary_image_frame(io.imread(binary_img_path_name), frame_info)
+        features, region_features, segments, region_segments, labels = extract_general_features_kmeans(img, binary_arr, segments_number=segments_number)
+        np.save(cache_dir + os.sep + os.path.splitext(f)[0] + '.npy', features.astype(np.float32))
+        np.save(frame_info_dir + os.sep + os.path.splitext(f)[0] + '.npy', frame_info.astype(np.uint8))
+        np.save(region_features_dir + os.sep + os.path.splitext(f)[0] + '.npy', region_features.astype(np.float32))
+        np.save(segments_dir + os.sep + os.path.splitext(f)[0] + '.npy', segments.astype(np.int16))
+        np.save(region_segments_dir + os.sep + os.path.splitext(f)[0] + '.npy', region_segments.astype(np.int16))
+        np.save(region_labels_dir + os.sep + os.path.splitext(f)[0] + '.npy', labels.astype(np.int16))
+
+
+def save_general_features_multiprocess(pics, original_img_dir, binary_img_dir, cache_dir, segments_number=300, original_img_ext='jpg', binary_img_ext='bmp'):
+    '''
+    use for multiprocess
+    :param pic: list of the pictures' name
+    :param original_img_dir:
+    :param binary_img_dir:
+    :param cache_dir:
+    :param segments_number:
+    :param original_img_ext:
+    :param binary_img_ext:
+    :return:
+    '''
+    if (not os.path.exists(original_img_dir)) and not (os.path.exists(binary_img_dir)):
+        raise NameError("Path does not exits, check out!")
+    # check out features_dir
+    if not os.path.exists(cache_dir):
+        os.mkdir(cache_dir)
+    region_features_dir = cache_dir + "_region"
+    if not os.path.exists(region_features_dir):
+        os.mkdir(region_features_dir)
+    segments_dir = cache_dir + "_segments"
+    if not os.path.exists(segments_dir):
+        os.mkdir(segments_dir)
+    region_segments_dir = cache_dir + "_region_segments"
+    if not os.path.exists(region_segments_dir):
+        os.mkdir(region_segments_dir)
+    region_labels_dir = cache_dir + "_region_labels"
+    if not os.path.exists(region_labels_dir):
+        os.mkdir(region_labels_dir)
+    frame_info_dir = cache_dir + "_frame_info"
+    if not os.path.exists(frame_info_dir):
+        os.mkdir(frame_info_dir)
+
+    list_features_dir = filter(lambda f: f.split('.')[-1] == original_img_ext, pics)
+
+    for f in list_features_dir:
+        img_path_name = original_img_dir + os.sep + f
+        binary_img_path_name = binary_img_dir + os.sep + os.path.splitext(f)[0] + '.' + binary_img_ext
+        img = io.imread(img_path_name)
+        img, frame_info = remove_frame(img)
+        binary_arr = preprocess_binary_image_frame(io.imread(binary_img_path_name), frame_info)
+        features, region_features, segments, region_segments, labels = extract_general_features_kmeans(img, binary_arr, segments_number=segments_number)
+        np.save(cache_dir + os.sep + os.path.splitext(f)[0] + '.npy', features.astype(np.float32))
+        np.save(frame_info_dir + os.sep + os.path.splitext(f)[0] + '.npy', frame_info.astype(np.uint8))
         np.save(region_features_dir + os.sep + os.path.splitext(f)[0] + '.npy', region_features.astype(np.float32))
         np.save(segments_dir + os.sep + os.path.splitext(f)[0] + '.npy', segments.astype(np.int16))
         np.save(region_segments_dir + os.sep + os.path.splitext(f)[0] + '.npy', region_segments.astype(np.int16))
@@ -1754,6 +1869,40 @@ def recreate_cache_file(name_list, original_img_dir, binary_img_dir, cache_dir):
         np.save(segments_dir + os.sep + os.path.splitext(f)[0] + '.npy', segments.astype(np.int16))
         np.save(region_segments_dir + os.sep + os.path.splitext(f)[0] + '.npy', region_segments.astype(np.int16))
         np.save(region_labels_dir + os.sep + os.path.splitext(f)[0] + '.npy', labels.astype(np.int16))
+
+
+def remove_frame(img):
+    edge_map = canny(color.rgb2grey(img))
+    m, n = edge_map.shape
+    flagt = 0; flagd = 0; flagl = 0; flagr = 0;
+    t = 1; d = 1; l = 1; r = 1;  # represent the width of the frame
+    threshold = 0.6
+
+    for i in xrange(30):
+        pbt = edge_map[i, :].mean()
+        pbd = edge_map[m - i - 1, :].mean()
+        pbl = edge_map[:, i].mean()
+        pbr = edge_map[:, n - i - 1].mean()
+        if pbt > threshold: flagt = 1; t = i + 1;
+        if pbd > threshold: flagd = 1; d = i + 1;
+        if pbl > threshold: flagl = 1; l = i + 1;
+        if pbr > threshold: flagr = 1; r = i + 1;
+
+    flagm = flagt + flagd + flagl + flagr
+    # we assume that there exists a frame when one more lines parallel to the image side are detected
+    if flagm > 1:
+        max_width = max([t, d, l, r])
+        if t == 1: t = max_width
+        if d == 1: d = max_width
+        if l == 1: l = max_width
+        if r == 1: r = max_width
+        r_img = img[t:(m - d), l:(n - r)]
+        f = [m, n, t, (m - d), l, (n - r)]
+    else:
+        r_img = img
+        f = [m, n, 0, m, 0, n]
+
+    return r_img, np.array(f)
 
 
 def feature_to_image(feature, segments, enhance=False, binary=False):

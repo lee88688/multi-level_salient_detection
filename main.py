@@ -47,6 +47,22 @@ def save_feature():
     # send_mail("the cache file production has completed, the total time is {0} hours.".format((stop - start) / 3600.0))
 
 
+def save_feature_multiprocess():
+    start = time()
+
+    list_features_dir = os.listdir(original_img_dir)
+    pics = filter(lambda f: f.split('.')[-1] == "jpg", list_features_dir)
+    p1 = Process(target=save_general_features_multiprocess, args=(pics[0:len(pics)/2], original_img_dir, binary_img_dir, general300_cache_out_dir, 300, 'jpg', 'bmp'))
+    p2 = Process(target=save_general_features_multiprocess, args=(pics[len(pics)/2:], original_img_dir, binary_img_dir, general300_cache_out_dir, 300, 'jpg', 'bmp'))
+    p1.start()
+    p2.start()
+    p1.join()
+    p2.join()
+
+    stop = time()
+    print "total time is: " + str(stop - start)
+
+
 def product_pictures():
     pic_list = ['0_24_24918.npy', '0_11_11830.npy', '3_110_110864.npy', '0_22_22047.npy', '0_15_15859.npy']  # 4
     pic_list = ['0_21_21413.npy', '1_40_40818.npy', '0_15_15620.npy', '2_86_86600.npy', '2_68_68619.npy']  # 5
@@ -144,7 +160,7 @@ def mr_original():
         neighbor = np.load(neighbor_dir + os.sep + f)
         region_labels = np.load(region_labels_dir + os.sep + f)
 
-        Aff = manifold_ranking_aff(feature[:, 0:3], segments, neighbor)
+        Aff = manifold_ranking_aff(feature[:, 0:3], segments, neighbor.copy())
 
         salt = np.zeros(neighbor.shape[0])
         salt[np.unique(segments[0, :])] = 1
@@ -173,7 +189,7 @@ def mr_original():
 
 
 if __name__ == "__main__":
-    mr_original()
+    save_feature_multiprocess()
 
 
 
