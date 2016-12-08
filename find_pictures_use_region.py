@@ -345,6 +345,18 @@ def test_feature_use_cache(clf, img_name, cache_dir):
     return predict_result[:, 1]
 
 
+def test_feature_use_cache2(clf, feature):
+    '''
+    use feature to predict result
+    :param clf:
+    :param img_name:
+    :param cache_dir:
+    :return:
+    '''
+    predict_result = clf.predict_proba(feature)
+    return predict_result[:, 1]
+
+
 def test_image_use_region(clf, img_name, cache_dir, original_img_dir):
     normalize = lambda s: (s - s.min()) / (s.max() - s.min())
 
@@ -459,6 +471,7 @@ def print_max_score_multiprocess(max_score, cache_dir, max_interation=100, pic_n
     features_dict = load_features_as_dict(cache_dir)
     label_array = label_array > 0.9
 
+    log = ""
     for i in xrange(max_interation):
         if pic_num != 1:
             random.shuffle(list_features_dir)
@@ -571,6 +584,50 @@ def product_saliency_image_use_cache(train_cache_dir, cache_dir, pic_list, c, ex
     for f in list_dir:
         saliency_img = test_image_use_cache(clf, f, cache_dir)
         # saliency_img = test_image_use_region(clf, f, cache_dir, original_img_dir)
+        io.imsave(out_dir + os.sep + f.split(".")[0] + ".png", saliency_img)
+
+
+def product_saliency_image_use_selected_features(train_cache_dir, cache_dir, general_cache_dir, pic_list, c, feature_list, extra):
+    '''
+    select some columns of the feature to train svm and product saliency map.
+    :param train_cache_dir:
+    :param cache_dir:
+    :param general_cache_dir:
+    :param pic_list:
+    :param c:
+    :param feature_list: a list that contains the columns to train. if is None, select all features.
+    :param extra:
+    :return:
+    '''
+    pic_num = len(pic_list)
+    # feature, label = get_features(original_img_dir, binary_img_dir, pic_list=pic_list)
+    feature, label = get_features_use_cache(train_cache_dir, pic_list)
+    # train feature
+    if feature_list is None:
+        clf = train_features(feature, label > 0.9, C=c)
+    else:
+        clf = train_features(feature[feature_list], label > 0.9, C=c)
+    # product saliency map
+    list_dir = os.listdir(cache_dir)
+    list_dir = filter(lambda f: os.path.splitext(f)[1] == '.npy', list_dir)
+    frame_info_dir = general_cache_dir + "_frame_info"
+    segments_dir = cache_dir + "_segments"
+    out_dir = saliency_img_out_dir + str(pic_num) + '_' + str(c) + '_' + str(extra)
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
+    for f in list_dir:
+        feature = np.load(cache_dir + os.sep + f)
+        feature = feature[:, 0:-1]
+        segments = np.load(segments_dir + os.sep + f)
+        if feature_list is None:
+            saliency_feature = test_feature_use_cache2(clf, feature)
+        else:
+            saliency_feature = test_feature_use_cache2(clf, feature[feature_list])
+        if os.path.exists(frame_info_dir):
+            frame = np.load(frame_info_dir + os.sep + f)
+        else:
+            frame = None
+        saliency_img = sf.feature_to_image(saliency_feature, segments, frame)
         io.imsave(out_dir + os.sep + f.split(".")[0] + ".png", saliency_img)
 
 
