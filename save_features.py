@@ -1689,7 +1689,7 @@ def extract_features_from_cache6(img_name, original_img_dir, cache_dir):
 
 def extract_features_from_cache7(img_name, original_img_dir, cache_dir):
     '''
-    add Manifold Ranking features, region Manifold Ranking features
+    remove center_color_feature, border_feature. use neighbor and its surrounding as neighbors
     :param img_name:
     :param original_img_dir:
     :param cache_dir: general cache dir
@@ -1741,12 +1741,6 @@ def extract_features_from_cache7(img_name, original_img_dir, cache_dir):
     x_coordinate = np.tile(x_axis, (a, 1,))  # 创建X轴的坐标表
     y_coordinate = np.tile(y_axis, (b, 1,))  # 创建y轴的坐标表
     y_coordinate = np.transpose(y_coordinate)
-
-    # border mask
-    # border_mask = (x_coordinate < 16) | (x_coordinate > b - 17) | (y_coordinate < 16) | (y_coordinate > a - 17)
-    # r = np.unique(segments[border_mask], return_counts=True)
-    # border_feature = np.zeros((max_segments, 1))
-    # border_feature[r[0], 0] = r[1]
 
     # FT feature
     blur_img_lab = cv2.filter2D(img_lab, -1, get_filter_kernel(5, 5))
@@ -1863,12 +1857,13 @@ def extract_features_from_cache7(img_name, original_img_dir, cache_dir):
     local_coordinate_segments_mean = np.zeros_like(coordinate_segments_mean)
     local_ft_feature = np.zeros_like(ft_feature)
     local_edge_feature = np.zeros_like(edge_feature)
+    neighbors_copy = fp.redefine_neighbor(segments, neighbors.copy())
     for i in xrange(max_segments):
         neighbors[i, i] = False
-        local_img_segments_mean[i, :] = np.mean(img_segments_mean[neighbors[i, :], :], axis=0)
-        local_coordinate_segments_mean[i, :] = np.mean(coordinate_segments_mean[neighbors[i, :], :], axis=0)
-        local_ft_feature[i, :] = np.mean(ft_feature[neighbors[i, :], :], axis=0)
-        local_edge_feature[i, :] = np.mean(edge_feature[neighbors[i, :], :], axis=0)
+        local_img_segments_mean[i, :] = np.mean(img_segments_mean[neighbors_copy[i, :], :], axis=0)
+        local_coordinate_segments_mean[i, :] = np.mean(coordinate_segments_mean[neighbors_copy[i, :], :], axis=0)
+        local_ft_feature[i, :] = np.mean(ft_feature[neighbors_copy[i, :], :], axis=0)
+        local_edge_feature[i, :] = np.mean(edge_feature[neighbors_copy[i, :], :], axis=0)
 
 
     Aff = fp.manifold_ranking_aff(img_segments_mean_copy, segments, neighbors.copy())
@@ -1888,14 +1883,6 @@ def extract_features_from_cache7(img_name, original_img_dir, cache_dir):
     salr = np.zeros((max_segments, 1))
     salr[np.unique(segments[:, segments.shape[1] - 1])] = 1
     salr = normalize(np.dot(Aff, salr))
-
-    #region manifold ranking features
-    region_mr_feature = []
-    for i in xrange(max(region_labels) + 1):
-        mr_feature = np.zeros((max_segments, 1))
-        mr_feature[region_labels == i] = 1
-        mr_feature = normalize(np.dot(Aff, mr_feature))
-        region_mr_feature.append(mr_feature)
 
     # normalize features
     img_segments_mean[:, 0] = normalize(img_segments_mean[:, 0])
@@ -1920,11 +1907,11 @@ def extract_features_from_cache7(img_name, original_img_dir, cache_dir):
     local_ft_feature = normalize(local_ft_feature)
     local_edge_feature = normalize_zero(local_edge_feature)
 
-    return np.concatenate([img_segments_mean, coordinate_segments_mean, uniqueness_plus, distribution,
-                           center_color_feature, ft_feature, edge_feature, region_conlor_contrast, DR,
+    return np.concatenate((img_segments_mean, coordinate_segments_mean, uniqueness_plus, distribution,
+                           ft_feature, edge_feature, region_conlor_contrast, DR,
                            local_img_segments_mean, local_coordinate_segments_mean, local_ft_feature,
-                           local_edge_feature, salt, sald, sall, salr] + region_mr_feature +
-                           [saliency_super_pixels[:, None]], axis=1), segments, neighbors
+                           local_edge_feature, salt, sald, sall, salr,
+                           saliency_super_pixels[:, None]), axis=1), segments, neighbors
 
 
 def region_segment(img, segments, th=0.001):

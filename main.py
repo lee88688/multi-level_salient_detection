@@ -221,7 +221,7 @@ def mr_original():
 
 
 if __name__ == "__main__":
-    product_pictures()
+    save_feature_multiprocess()
 
 
 
