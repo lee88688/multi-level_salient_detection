@@ -606,7 +606,7 @@ def product_saliency_image_use_selected_features(train_cache_dir, cache_dir, gen
     if feature_list is None:
         clf = train_features(feature, label > 0.9, C=c)
     else:
-        clf = train_features(feature[feature_list], label > 0.9, C=c)
+        clf = train_features(feature[:, feature_list], label > 0.9, C=c)
     # product saliency map
     list_dir = os.listdir(cache_dir)
     list_dir = filter(lambda f: os.path.splitext(f)[1] == '.npy', list_dir)
@@ -622,7 +622,7 @@ def product_saliency_image_use_selected_features(train_cache_dir, cache_dir, gen
         if feature_list is None:
             saliency_feature = test_feature_use_cache2(clf, feature)
         else:
-            saliency_feature = test_feature_use_cache2(clf, feature[feature_list])
+            saliency_feature = test_feature_use_cache2(clf, feature[:, feature_list])
         if os.path.exists(frame_info_dir):
             frame = np.load(frame_info_dir + os.sep + f)
         else:
@@ -905,6 +905,24 @@ def redefine_neighbor(segments, neighbors):
     for i in border_sp:
         neighbors[i, border_sp] = True
     # neighbors |= neighbors.T
+    neighbors[np.eye(neighbors.shape[0], dtype=np.bool)] = False
+
+    return neighbors
+
+
+def redefine_neighbor2(segments, neighbors):
+    '''
+    remove border superpixels as neighbors
+    :param segments:
+    :param neighbors:
+    :return:
+    '''
+    x = np.arange(neighbors.shape[0])
+    n = neighbors.copy()
+    for i in xrange(neighbors.shape[0]):
+        mask = np.any(neighbors[x[neighbors[i, :]], :], axis=0)
+        n[i, :] |= mask
+    neighbors = n
     neighbors[np.eye(neighbors.shape[0], dtype=np.bool)] = False
 
     return neighbors

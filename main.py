@@ -8,16 +8,18 @@ import numpy as np
 from path import *
 from time import time, sleep
 from skimage import io
+from sklearn.ensemble import RandomForestClassifier
 
+cache_out_dir = cache_out_dir8
 
 def find_pictures():
     start = time()
     max_score = Value('d', 0.0)
     # print_max_score_multiprocess(max_score, dut_cache_out_dir, 10000, 5, 10)
-    p1 = Process(target=fp.print_max_score_multiprocess, args=(max_score, cache_out_dir5, 10000, 5, 1))
-    p2 = Process(target=fp.print_max_score_multiprocess, args=(max_score, cache_out_dir5, 10000, 5, 1))
-    p3 = Process(target=fp.print_max_score_multiprocess, args=(max_score, cache_out_dir5, 10000, 5, 1))
-    p4 = Process(target=fp.print_max_score_multiprocess, args=(max_score, cache_out_dir5, 10000, 5, 1))
+    p1 = Process(target=fp.print_max_score_multiprocess, args=(max_score, cache_out_dir, 10000, 5, 1))
+    p2 = Process(target=fp.print_max_score_multiprocess, args=(max_score, cache_out_dir, 10000, 5, 1))
+    p3 = Process(target=fp.print_max_score_multiprocess, args=(max_score, cache_out_dir, 10000, 5, 1))
+    p4 = Process(target=fp.print_max_score_multiprocess, args=(max_score, cache_out_dir, 10000, 5, 1))
     p1.start()
     p2.start()
     p3.start()
@@ -44,7 +46,7 @@ def save_feature():
     # save_features_from_general_cache4(original_img_dir, general300_cache_out_dir, cache_out_dir, 'jpg')
     # save_features_from_general_cache4(dut_original_img_dir, dut_general300_cache_out_dir, dut_cache_out_dir, 'jpg')
 
-    sf.save_features_from_general_cache5(original_img_dir, general300_cache_out_dir, cache_out_dir5, 'jpg')
+    sf.save_features_from_general_cache5(original_img_dir, general300_cache_out_dir, cache_out_dir, 'jpg')
 
     stop = time()
     print "total time is: " + str(stop - start)
@@ -71,10 +73,10 @@ def save_feature_multiprocess():
 
     list_features_dir = os.listdir(original_img_dir)
     pics = filter(lambda f: f.split('.')[-1] == "jpg", list_features_dir)
-    p1 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[0:len(pics)/4], original_img_dir, general300_cache_out_dir, cache_out_dir5, 'jpg'))
-    p2 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[len(pics)/4:len(pics)*2/4],original_img_dir, general300_cache_out_dir, cache_out_dir5, 'jpg'))
-    p3 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[len(pics)*2/4:len(pics)*3/4],original_img_dir, general300_cache_out_dir, cache_out_dir5, 'jpg'))
-    p4 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[len(pics)*3/4:],original_img_dir, general300_cache_out_dir, cache_out_dir5, 'jpg'))
+    p1 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[0:len(pics)/4], original_img_dir, general300_cache_out_dir, cache_out_dir, 'jpg'))
+    p2 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[len(pics)/4:len(pics)*2/4],original_img_dir, general300_cache_out_dir, cache_out_dir, 'jpg'))
+    p3 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[len(pics)*2/4:len(pics)*3/4],original_img_dir, general300_cache_out_dir, cache_out_dir, 'jpg'))
+    p4 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[len(pics)*3/4:],original_img_dir, general300_cache_out_dir, cache_out_dir, 'jpg'))
     p1.start()
     p2.start()
     p3.start()
@@ -89,14 +91,10 @@ def save_feature_multiprocess():
 
 
 def product_pictures():
-    pic_list = ['0_24_24918.npy', '0_11_11830.npy', '3_110_110864.npy', '0_22_22047.npy', '0_15_15859.npy']  # 4
-    pic_list = ['0_21_21413.npy', '1_40_40818.npy', '0_15_15620.npy', '2_86_86600.npy', '2_68_68619.npy']  # 5
-    pic_list = ['0_14_14991.npy', '3_117_117677.npy', '2_93_93978.npy', '2_68_68619.npy', '5_145_145845.npy']
-    pic_list = ['0_15_15644.npy', '5_145_145845.npy', '3_95_95695.npy', '4_127_127788.npy', '2_76_76952.npy']
-    pic_list = ['0_5_5586.npy', '0_18_18723.npy', '3_122_122851.npy', '4_140_140686.npy', '2_68_68619.npy']
+    pic_list = ['4_140_140140.npy', '0_24_24455.npy', '1_55_55530.npy', '1_59_59420.npy', '1_45_45131.npy']
     pic_list = map(lambda s: s.split('.')[0] + '.jpg', pic_list)
     # fp.product_saliency_image_use_cache(cache_out_dir, cache_out_dir, pic_list, 1, "mr")
-    fp.product_saliency_image_use_selected_features(cache_out_dir5, cache_out_dir5, general_cache_out_dir, pic_list, 1, None, "region_mr")
+    fp.product_saliency_image_use_selected_features(cache_out_dir, cache_out_dir, general_cache_out_dir, pic_list, 1, feature_list, "reduce5")
     # fp.product_saliency_feature_use_cache(cache_out_dir, cache_out_dir, pic_list, 1, "mr")
 
 
@@ -113,9 +111,9 @@ def mr_saliency():
     images_dir = r'G:\Project\paper2\out\image\out'
     # predicts_to_images(predicts_dir, images_dir, cache_out_dir)
 
-    features_dir = cache_out_dir5
+    features_dir = cache_out_dir
     segments_dir = general_cache_out_dir + "_segments"
-    neighbor_dir = cache_out_dir5 + "_neighbor"
+    neighbor_dir = cache_out_dir + "_neighbor"
     region_labels_dir = general_cache_out_dir + "_region_labels"
 
     mr_images_dir = images_dir + "_mr"
@@ -219,9 +217,36 @@ def mr_original():
         # return l
 
 
+def RF_saliency():
+    pic_list = ['1_46_46443.npy', '4_140_140686.npy', '2_68_68592.npy', '2_69_69370.npy', '2_68_68619.npy']
+    feature, label = fp.get_features_use_cache(cache_out_dir, pic_list)
+    clf = RandomForestClassifier(n_estimators=1000, n_jobs=4)
+    clf.fit(feature, label > 0.9)
+    return clf
+
+    list_dir = filter(lambda s: s.split('.')[-1] == 'npy', os.listdir(cache_out_dir))
+    frame_info_dir = general_cache_out_dir + "_frame_info"
+    segments_dir = cache_out_dir + "_segments"
+    out_dir = saliency_img_out_dir + "_RF"
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
+
+    for f in list_dir:
+        feature = np.load(cache_out_dir + os.sep + f)
+        feature = feature[:, 0:-1]
+        segments = np.load(segments_dir + os.sep + f)
+        predict_result = clf.predict_proba(feature)
+        saliency_feature = predict_result[:, 1]
+        if os.path.exists(frame_info_dir):
+            frame = np.load(frame_info_dir + os.sep + f)
+        else:
+            frame = None
+        saliency_img = sf.feature_to_image(saliency_feature, segments, frame)
+        io.imsave(out_dir + os.sep + f.split(".")[0] + ".png", saliency_img)
+
 
 if __name__ == "__main__":
-    save_feature_multiprocess()
+    product_pictures()
 
 
 
