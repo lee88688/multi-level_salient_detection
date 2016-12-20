@@ -91,10 +91,10 @@ def save_feature_multiprocess():
 
 
 def product_pictures():
-    pic_list = ['4_140_140140.npy', '0_24_24455.npy', '1_55_55530.npy', '1_59_59420.npy', '1_45_45131.npy']
+    pic_list = ['4_143_143199.npy', '0_23_23666.npy', '4_141_141591.npy', '2_77_77109.npy', '2_68_68932.npy']
     pic_list = map(lambda s: s.split('.')[0] + '.jpg', pic_list)
     # fp.product_saliency_image_use_cache(cache_out_dir, cache_out_dir, pic_list, 1, "mr")
-    fp.product_saliency_image_use_selected_features(cache_out_dir, cache_out_dir, general_cache_out_dir, pic_list, 1, feature_list, "reduce5")
+    fp.product_saliency_image_use_selected_features(cache_out_dir, cache_out_dir, general_cache_out_dir, pic_list, 1, None, "reduce1")
     # fp.product_saliency_feature_use_cache(cache_out_dir, cache_out_dir, pic_list, 1, "mr")
 
 
@@ -246,7 +246,7 @@ def RF_saliency():
 
 
 if __name__ == "__main__":
-    product_pictures()
+    a = product_pictures()
 
 
 

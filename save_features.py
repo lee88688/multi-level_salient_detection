@@ -1916,7 +1916,7 @@ def extract_features_from_cache7(img_name, original_img_dir, cache_dir):
 
 def extract_features_from_cache8(img_name, original_img_dir, cache_dir):
     '''
-    add Manifold Ranking features
+    add center_color_feature, remove ft_feature and local_ft_feature
     :param img_name:
     :param original_img_dir:
     :param cache_dir: general cache dir
