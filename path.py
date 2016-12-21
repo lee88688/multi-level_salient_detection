@@ -11,6 +11,7 @@ if os.path.exists("G:/"):
     cache_out_dir5 = r'G:\Project\paper2\cache\cache_features_local_surround_300_5\feature_cache'
     cache_out_dir4 = r'G:\Project\paper2\cache\cache_features_local_surround_300_4\feature_cache'
     cache_out_dir8 = r'G:\Project\paper2\cache\cache_features_local_surround_300_8\feature_cache'
+    cache_out_dir9 = r'G:\Project\paper2\cache\cache_features_local_surround_300_9\feature_cache'
 
     dut_original_img_dir = r"G:\Project\paper2\other_image\DUT\DUT-OMRON-image"
     dut_binary_img_dir = r"G:\Project\paper2\other_image\DUT\pixelwiseGT-new-PNG"
@@ -28,6 +29,7 @@ else:
     cache_out_dir5 = r'F:\lee\cache\cache_features_local_surround_300_5\feature_cache'
     cache_out_dir4 = r'F:\lee\cache\cache_features_local_surround_300_4\feature_cache'
     cache_out_dir8 = r'F:\lee\cache\cache_features_local_surround_300_8\feature_cache'
+    cache_out_dir9 = r'F:\lee\cache\cache_features_local_surround_300_9\feature_cache'
 
     dut_original_img_dir = r"F:\lee\DUT\DUT-OMRON-image"
     dut_binary_img_dir = r"F:\lee\DUT\pixelwiseGT-new-PNG"
