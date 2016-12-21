@@ -10,7 +10,7 @@ from time import time, sleep
 from skimage import io
 from sklearn.ensemble import RandomForestClassifier
 
-cache_out_dir = cache_out_dir8
+cache_out_dir = cache_out_dir9
 
 def find_pictures():
     start = time()
@@ -246,7 +246,7 @@ def RF_saliency():
 
 
 if __name__ == "__main__":
-    a = product_pictures()
+    a = find_pictures()
 
 
 

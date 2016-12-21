@@ -2134,6 +2134,254 @@ def extract_features_from_cache8(img_name, original_img_dir, cache_dir):
                            saliency_super_pixels[:, None]), axis=1), segments, neighbors
 
 
+def extract_features_from_cache9(img_name, original_img_dir, cache_dir):
+    '''
+    add local color contrast
+    :param img_name:
+    :param original_img_dir:
+    :param cache_dir: general cache dir
+    :return:
+    '''
+    if not os.path.exists(cache_dir):
+        raise NameError("Not such cache dir!")
+    region_features_dir = cache_dir + "_region"
+    segments_dir = cache_dir + "_segments"
+    region_labels_dir = cache_dir + "_region_labels"
+    frame_info_dir = cache_dir + "_frame_info"
+    img_npy_name = img_name.split('.')[0] + ".npy"
+
+    normalize = lambda s: (s - s.min()) / (s.max() - s.min())
+    normalize_zero = lambda s: (s - s.min()) / (s.max() - s.min() + 1)
+    d_fun = lambda d_c, d_p: d_c / (5 * (1 + d_p))
+    get_filter_kernel = lambda x, y: cv2.mulTransposed(cv2.getGaussianKernel(x, y), False)
+    sigma1 = 10
+    sigma2 = 21.10405218
+    sigma3 = 50
+    sigma4 = 23.3557741048
+
+    img = io.imread(original_img_dir + os.sep + img_name)
+    frame = np.load(frame_info_dir + os.sep + img_npy_name)
+    feature = np.load(cache_dir + os.sep + img_npy_name)
+    segments = np.load(segments_dir + os.sep + img_npy_name)
+    region_feature = np.load(region_features_dir + os.sep + img_npy_name)
+    region_labels = np.load(region_labels_dir + os.sep + img_npy_name)
+    # remove frame
+    img = img[frame[2]:frame[3], frame[4]:frame[5]]
+
+    img_segments_mean = feature[:, 0:3]
+    coordinate_segments_mean = feature[:, 3:5]
+    saliency_super_pixels = feature[:, -1]
+    img_region_segments_mean = region_feature[:, 0:3]
+    coordinate_region_segments_mean = region_feature[:, 3:5]
+    img_segments_mean_copy = img_segments_mean.copy()  # backup for manifold ranking feature
+
+    img_lab = rgb2lab(img)
+    max_segments = segments.max() + 1
+
+    # create x,y feather
+    shape = img.shape
+    size = img.size
+    a = shape[0]
+    b = shape[1]
+    x_axis = np.linspace(0, b - 1, num=b)
+    y_axis = np.linspace(0, a - 1, num=a)
+
+    x_coordinate = np.tile(x_axis, (a, 1,))  # 创建X轴的坐标表
+    y_coordinate = np.tile(y_axis, (b, 1,))  # 创建y轴的坐标表
+    y_coordinate = np.transpose(y_coordinate)
+
+    # FT feature
+    blur_img_lab = cv2.filter2D(img_lab, -1, get_filter_kernel(5, 5))
+    blur_lm = blur_img_lab[:, :, 0].mean()
+    blur_am = blur_img_lab[:, :, 1].mean()
+    blur_bm = blur_img_lab[:, :, 2].mean()
+    blur_sm = np.sqrt((blur_img_lab[:, :, 0] - blur_lm) ** 2 + (blur_img_lab[:, :, 1] - blur_am) ** 2 + (
+        blur_img_lab[:, :, 2] - blur_bm) ** 2)
+
+    # color center feature
+    w_sum = np.sum(blur_sm)
+    x_center = np.sum(blur_sm * x_coordinate) / w_sum
+    y_center = np.sum(blur_sm * y_coordinate) / w_sum
+    center_color_map = np.exp(- (np.abs(x_coordinate - x_center) + np.abs(y_coordinate - y_center)) / 250)
+    center_color_feature = np.zeros((max_segments, 1))
+
+    # edge feature
+    edge_img = grey_dilation(canny(cv2.filter2D(rgb2grey(img), -1, get_filter_kernel(10, 5))), size=(5, 5))
+    edge_feature = np.zeros((max_segments, 1))
+
+    # local element
+    # left and right
+    local_map1 = np.concatenate([np.diff(segments, axis=1), np.zeros([a, 1])], axis=1)
+    local_map2 = np.fliplr(np.concatenate([np.diff(np.fliplr(segments), axis=1), np.zeros([a, 1])], axis=1))
+    # up and down
+    local_map3 = np.concatenate([np.diff(segments, axis=0), np.zeros([1, b])], axis=0)
+    local_map4 = np.flipud(np.concatenate([np.diff(np.flipud(segments), axis=0), np.zeros([1, b])], axis=0))
+
+    local_map1 = local_map1.astype(np.bool)
+    local_map2 = local_map2.astype(np.bool)
+    local_map3 = local_map3.astype(np.bool)
+    local_map4 = local_map4.astype(np.bool)
+
+    x_coordinate_map = x_coordinate.copy()
+    x_coordinate_tmp = x_coordinate.copy()
+    y_coordinate_map = y_coordinate.copy()
+    y_coordinate_tmp = y_coordinate.copy()
+    x_coordinate_map[local_map1] += 1
+    x_coordinate_map[local_map2] -= 1
+    y_coordinate_map[local_map3] += 1
+    y_coordinate_map[local_map4] -= 1
+
+    x_coordinate_map[~(local_map1 | local_map2)] = 0
+    y_coordinate_tmp[~(local_map1 | local_map2)] = 0
+
+    y_coordinate_map[~(local_map3 | local_map4)] = 0
+    x_coordinate_tmp[~(local_map3 | local_map4)] = 0
+
+    coordinate_r = np.zeros([a, b, 2], dtype=np.int32)
+    coordinate_c = np.zeros([a, b, 2], dtype=np.int32)
+    # column
+    coordinate_c[:, :, 0] = y_coordinate_tmp
+    coordinate_c[:, :, 1] = x_coordinate_map
+    # row
+    coordinate_r[:, :, 0] = y_coordinate_map
+    coordinate_r[:, :, 1] = x_coordinate_tmp
+
+    neighbors = np.eye(max_segments, dtype=np.bool)
+    func = lambda a: segments[a[0], a[1]]
+
+    for i in xrange(max_segments):
+        segments_i = segments == i
+
+        center_color_feature[i] = center_color_map[segments_i].mean()
+
+        edge_feature[i] = edge_img[segments_i].sum()
+
+        # column
+        c = coordinate_c[segments_i]
+        d = np.unique(np.apply_along_axis(func, axis=1, arr=c[(c[:, 0] > 0) | (c[:, 1] > 0), :]))
+        neighbors[i, d] = True
+        # row
+        c = coordinate_r[segments_i]
+        d = np.unique(np.apply_along_axis(func, axis=1, arr=c[(c[:, 0] > 0) | (c[:, 1] > 0), :]))
+        neighbors[i, d] = True
+
+    # uniqueness plus
+    w_ij = 1 - np.exp(-cdist(coordinate_segments_mean, coordinate_segments_mean) * sigma1)
+    w_ij = w_ij / w_ij.sum(axis=1)[:, None]
+    # mu_i_c = np.dot(wp_ij, img_segments_mean)
+    uniqueness_plus = np.sum(cdist(img_segments_mean, img_segments_mean) * w_ij, axis=1)
+    uniqueness_plus = np.array([uniqueness_plus]).T
+
+    # distribution
+    wc_ij = np.exp(-cdist(img_segments_mean, img_segments_mean) ** 2 / (2 * sigma2 ** 2))
+    wc_ij = wc_ij / wc_ij.sum(axis=1)[:, None]
+    mu_i = np.dot(wc_ij, coordinate_segments_mean)
+    distribution = np.dot(wc_ij, np.linalg.norm(coordinate_segments_mean - mu_i, axis=1) ** 2)
+    distribution = np.array([distribution]).T
+
+    r = np.unique(region_labels, return_counts=True)
+    size = r[1]*1.0/region_labels.size
+
+    D = cdist(img_segments_mean, img_region_segments_mean)
+
+    w_ij = 1 - np.exp(
+        -cdist(coordinate_segments_mean, coordinate_region_segments_mean) * sigma3)
+    w_ij = w_ij / w_ij.sum(axis=1)[:, None]
+
+    region_conlor_contrast = np.sum(w_ij * D * size, axis=1)
+    region_conlor_contrast = region_conlor_contrast[:, None]
+
+    wd_ij = np.exp(-cdist(img_segments_mean, img_region_segments_mean) ** 2 / (2 * sigma4 ** 2))
+    wd_ij = wd_ij / wd_ij.sum(axis=1)[:, None]
+    mu_i = np.dot(wd_ij, coordinate_region_segments_mean)
+    DR = np.sum(cdist(mu_i, coordinate_region_segments_mean) * wd_ij * size, axis=1)
+    DR = DR[:, None]
+
+    # local features
+    local_img_segments_mean = np.zeros_like(img_segments_mean)
+    local_coordinate_segments_mean = np.zeros_like(coordinate_segments_mean)
+    local_edge_feature = np.zeros_like(edge_feature)
+    for i in xrange(max_segments):
+        neighbors[i, i] = False
+        local_img_segments_mean[i, :] = np.mean(img_segments_mean[neighbors[i, :], :], axis=0)
+        local_coordinate_segments_mean[i, :] = np.mean(coordinate_segments_mean[neighbors[i, :], :], axis=0)
+        local_edge_feature[i, :] = np.mean(edge_feature[neighbors[i, :], :], axis=0)
+
+
+    Aff = fp.manifold_ranking_aff(img_segments_mean_copy, segments, neighbors.copy())
+    # top
+    salt = np.zeros((max_segments, 1))
+    salt[np.unique(segments[0, :])] = 1
+    salt = normalize(np.dot(Aff, salt))
+    # down
+    sald = np.zeros((max_segments, 1))
+    sald[np.unique(segments[segments.shape[0] - 1, :])] = 1
+    sald = normalize(np.dot(Aff, sald))
+    # left
+    sall = np.zeros((max_segments, 1))
+    sall[np.unique(segments[:, 0])] = 1
+    sall = normalize(np.dot(Aff, sall))
+    # right
+    salr = np.zeros((max_segments, 1))
+    salr[np.unique(segments[:, segments.shape[1] - 1])] = 1
+    salr = normalize(np.dot(Aff, salr))
+
+    # local color contrast
+    local_color_contrast = local_contrast(img_segments_mean_copy, segments, neighbors.copy())
+
+    # normalize features
+    img_segments_mean[:, 0] = normalize(img_segments_mean[:, 0])
+    img_segments_mean[:, 1] = normalize(img_segments_mean[:, 1])
+    img_segments_mean[:, 2] = normalize(img_segments_mean[:, 2])
+    coordinate_segments_mean[:, 0] = normalize(coordinate_segments_mean[:, 0])
+    coordinate_segments_mean[:, 1] = normalize(coordinate_segments_mean[:, 1])
+    center_color_feature = normalize(center_color_feature)
+    edge_feature = normalize_zero(edge_feature)
+    uniqueness_plus = normalize(uniqueness_plus)
+    distribution = normalize(distribution)
+    # region features
+    region_conlor_contrast = normalize(region_conlor_contrast)
+    DR = normalize(DR)
+    # local features
+    local_img_segments_mean[:, 0] = normalize(local_img_segments_mean[:, 0])
+    local_img_segments_mean[:, 1] = normalize(local_img_segments_mean[:, 1])
+    local_img_segments_mean[:, 2] = normalize(local_img_segments_mean[:, 2])
+    local_coordinate_segments_mean[:, 0] = normalize(local_coordinate_segments_mean[:, 0])
+    local_coordinate_segments_mean[:, 1] = normalize(local_coordinate_segments_mean[:, 1])
+    local_edge_feature = normalize_zero(local_edge_feature)
+    local_color_contrast = normalize(local_color_contrast).reshape((local_color_contrast.size, 1))
+
+    return np.concatenate((img_segments_mean, coordinate_segments_mean, uniqueness_plus, distribution,
+                           center_color_feature, edge_feature, region_conlor_contrast, DR,
+                           local_img_segments_mean, local_coordinate_segments_mean, local_color_contrast,
+                           local_edge_feature, salt, sald, sall, salr,
+                           saliency_super_pixels[:, None]), axis=1), segments, neighbors
+
+
+def local_contrast(features, segments, neighbors):
+    # get the surroundings of the surroundings of the superpixel
+    x = np.arange(neighbors.shape[0])
+    n = neighbors.copy()
+    for i in xrange(neighbors.shape[0]):
+        mask = np.any(neighbors[x[neighbors[i, :]], :], axis=0)
+        n[i, :] |= mask
+    neighbors = n
+    border_sp = np.unique(np.concatenate([segments[0, :], segments[segments.shape[0]-1, :], segments[:, 0], segments[:, segments.shape[1] - 1]]))
+    for i in border_sp:
+        neighbors[i, border_sp] = True
+    # neighbors |= neighbors.T
+    neighbors[np.eye(neighbors.shape[0], dtype=np.bool)] = False
+
+    img_segments_mean = features
+    W = cdist(img_segments_mean, img_segments_mean)
+    W_max = W[neighbors].max()
+    W_min = W[neighbors].min()
+    W = np.exp(-(W - W_min) / ((W_max - W_min) * 0.1))
+    W[~neighbors] = 0
+
+    return W.sum(axis=1)
+
+
 def region_segment(img, segments, th=0.001):
     g = graph.rag_mean_color(img, segments, mode="similarity")
     normalize_segments = graph.cut_normalized(segments, g, thresh=th)
@@ -2527,7 +2775,7 @@ def save_features_from_general_cache_multiprocess(pics, original_img_dir, genera
 
     list_dir = filter(lambda s: s.split(".")[-1] == original_img_ext, pics)
     for f in list_dir:
-        features, segments, neighbor = extract_features_from_cache8(f, original_img_dir, general_cache_dir)
+        features, segments, neighbor = extract_features_from_cache9(f, original_img_dir, general_cache_dir)
         np.save(cache_dir + os.sep + os.path.splitext(f)[0] + '.npy', features)
         np.save(segments_dir + os.sep + os.path.splitext(f)[0] + '.npy', segments.astype(np.int16))
         np.save(neighbor_dir + os.sep + os.path.splitext(f)[0] + '.npy', neighbor)
