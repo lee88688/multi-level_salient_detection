@@ -5,12 +5,14 @@ from sendmail import send_mail
 import find_pictures_use_region as fp
 import save_features as sf
 import numpy as np
+import csv
 from path import *
 from time import time, sleep
 from skimage import io
 from sklearn.ensemble import RandomForestClassifier
 
 cache_out_dir = cache_out_dir9
+train_cache_dir = cache_out_dir9
 
 def find_pictures():
     start = time()
@@ -56,27 +58,27 @@ def save_feature():
 def save_feature_multiprocess():
     start = time()
 
-    # list_features_dir = os.listdir(original_img_dir)
-    # pics = filter(lambda f: f.split('.')[-1] == "jpg", list_features_dir)
-    # p1 = Process(target=sf.save_general_features_multiprocess, args=(pics[0:len(pics)/4], original_img_dir, binary_img_dir, general300_cache_out_dir, 300, 'jpg', 'bmp'))
-    # p2 = Process(target=sf.save_general_features_multiprocess, args=(pics[len(pics)/4:len(pics)*2/4], original_img_dir, binary_img_dir, general300_cache_out_dir, 300, 'jpg', 'bmp'))
-    # p3 = Process(target=sf.save_general_features_multiprocess, args=(pics[len(pics)*2/4:len(pics)*3/4],original_img_dir, binary_img_dir, general300_cache_out_dir, 300, 'jpg', 'bmp'))
-    # p4 = Process(target=sf.save_general_features_multiprocess, args=(pics[len(pics)*3/4:], original_img_dir, binary_img_dir, general300_cache_out_dir, 300, 'jpg', 'bmp'))
-    # p1.start()
-    # p2.start()
-    # p3.start()
-    # p4.start()
-    # p1.join()
-    # p2.join()
-    # p3.join()
-    # p4.join()
-
-    list_features_dir = os.listdir(original_img_dir)
+    list_features_dir = os.listdir(sod_original_img_dir)
     pics = filter(lambda f: f.split('.')[-1] == "jpg", list_features_dir)
-    p1 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[0:len(pics)/4], original_img_dir, general300_cache_out_dir, cache_out_dir, 'jpg'))
-    p2 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[len(pics)/4:len(pics)*2/4],original_img_dir, general300_cache_out_dir, cache_out_dir, 'jpg'))
-    p3 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[len(pics)*2/4:len(pics)*3/4],original_img_dir, general300_cache_out_dir, cache_out_dir, 'jpg'))
-    p4 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[len(pics)*3/4:],original_img_dir, general300_cache_out_dir, cache_out_dir, 'jpg'))
+    p1 = Process(target=sf.save_general_features_multiprocess, args=(pics[0:len(pics)/4], sod_original_img_dir, sod_binary_img_dir, sod_general300_cache_out_dir, 300, 'jpg', 'bmp'))
+    p2 = Process(target=sf.save_general_features_multiprocess, args=(pics[len(pics)/4:len(pics)*2/4], sod_original_img_dir, sod_binary_img_dir, sod_general300_cache_out_dir, 300, 'jpg', 'bmp'))
+    p3 = Process(target=sf.save_general_features_multiprocess, args=(pics[len(pics)*2/4:len(pics)*3/4],sod_original_img_dir, sod_binary_img_dir, sod_general300_cache_out_dir, 300, 'jpg', 'bmp'))
+    p4 = Process(target=sf.save_general_features_multiprocess, args=(pics[len(pics)*3/4:], sod_original_img_dir, sod_binary_img_dir, sod_general300_cache_out_dir, 300, 'jpg', 'bmp'))
+    p1.start()
+    p2.start()
+    p3.start()
+    p4.start()
+    p1.join()
+    p2.join()
+    p3.join()
+    p4.join()
+
+    list_features_dir = os.listdir(sod_original_img_dir)
+    pics = filter(lambda f: f.split('.')[-1] == "jpg", list_features_dir)
+    p1 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[0:len(pics)/4], sod_original_img_dir, sod_general300_cache_out_dir, sod_cache_out_dir, 'jpg'))
+    p2 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[len(pics)/4:len(pics)*2/4], sod_original_img_dir, sod_general300_cache_out_dir, sod_cache_out_dir, 'jpg'))
+    p3 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[len(pics)*2/4:len(pics)*3/4], sod_original_img_dir, sod_general300_cache_out_dir, sod_cache_out_dir, 'jpg'))
+    p4 = Process(target=sf.save_features_from_general_cache_multiprocess, args=(pics[len(pics)*3/4:], sod_original_img_dir, sod_general300_cache_out_dir, sod_cache_out_dir, 'jpg'))
     p1.start()
     p2.start()
     p3.start()
@@ -91,11 +93,21 @@ def save_feature_multiprocess():
 
 
 def product_pictures():
-    pic_list = ['4_143_143199.npy', '0_23_23666.npy', '4_141_141591.npy', '2_77_77109.npy', '2_68_68932.npy']
+    pic_list = ['0_0_840.npy', '0_0_899.npy', '0_12_12344.npy', '4_143_143630.npy', '0_3_3524.npy']
     pic_list = map(lambda s: s.split('.')[0] + '.jpg', pic_list)
     # fp.product_saliency_image_use_cache(cache_out_dir, cache_out_dir, pic_list, 1, "mr")
-    fp.product_saliency_image_use_selected_features(cache_out_dir, cache_out_dir, general_cache_out_dir, pic_list, 1, None, "reduce1")
+    fp.product_saliency_image_use_selected_features(train_cache_dir, sod_cache_out_dir, sod_general300_cache_out_dir, pic_list, 1, None, "sod")
+    fp.product_saliency_image_use_selected_features(train_cache_dir, sed_cache_out_dir, sed_general300_cache_out_dir, pic_list, 1, None, "sed")
     # fp.product_saliency_feature_use_cache(cache_out_dir, cache_out_dir, pic_list, 1, "mr")
+
+
+def product_all_pictures():
+    reader = csv.reader(open("out.txt", "rb"), delimiter=':')
+    pic_lists = list(reader)
+    for i, row in enumerate(pic_lists):
+        pic_list = map(lambda s: s.split('.')[0] + '.jpg', eval(row[-1]))
+        # fp.product_saliency_image_use_cache(cache_out_dir, cache_out_dir, pic_list, 1, "mr")
+        fp.product_saliency_image_use_selected_features(cache_out_dir, cache_out_dir, general_cache_out_dir, pic_list, 1, None, "result_" + str(i))
 
 
 def product_pictures_upsample():
@@ -246,7 +258,7 @@ def RF_saliency():
 
 
 if __name__ == "__main__":
-    a = find_pictures()
+    product_pictures()
 
 
 

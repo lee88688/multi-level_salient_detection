@@ -18,6 +18,16 @@ if os.path.exists("G:/"):
     dut_general300_cache_out_dir = r'G:\Project\paper2\cache\cache_dut_general_kmeans_300\feature_cache'
     dut_cache_out_dir = r'G:\Project\paper2\cache\cache_dut_features_local_surround_300\feature_cache'
 
+    sed_original_img_dir = r"G:\Project\paper2\other_image\SODandSED\SED1_IMAGE\src_color"
+    sed_binary_img_dir = r"G:\Project\paper2\other_image\SODandSED\SED1_IMAGE\human_seg"
+    sed_general300_cache_out_dir = r'G:\Project\paper2\cache\cache_sed_general_kmeans_300\feature_cache'
+    sed_cache_out_dir = r'G:\Project\paper2\cache\cache_sed_features_local_surround_300\feature_cache'
+
+    sod_original_img_dir = r"G:\Project\paper2\other_image\SODandSED\SOD_IMAGE\src"
+    sod_binary_img_dir = r"G:\Project\paper2\other_image\SODandSED\SOD_IMAGE\SOD_gt2"
+    sod_general300_cache_out_dir = r'G:\Project\paper2\cache\cache_sod_general_kmeans_300\feature_cache'
+    sod_cache_out_dir = r'G:\Project\paper2\cache\cache_sod_features_local_surround_300\feature_cache'
+
     saliency_img_out_dir = r"G:\Project\paper2\out\image\out"
     saliency_feature_out_dir = r"G:\Project\paper2\out\feature\out"
     general_cache_out_dir = general300_cache_out_dir
@@ -35,6 +45,16 @@ else:
     dut_binary_img_dir = r"F:\lee\DUT\pixelwiseGT-new-PNG"
     dut_general300_cache_out_dir = r'F:\lee\cache\cache_dut_general_kmeans_300\feature_cache'
     dut_cache_out_dir = r'F:\lee\cache\cache_dut_features_local_surround_300\feature_cache'
+
+    sed_original_img_dir = r"F:\lee\SODandSED\SED1_IMAGE\src_color"
+    sed_binary_img_dir = r"F:\lee\SODandSED\SED1_IMAGE\human_seg"
+    sed_general300_cache_out_dir = r'F:\lee\cache\cache_sed_general_kmeans_300\feature_cache'
+    sed_cache_out_dir = r'F:\lee\cache\cache_sed_features_local_surround_300\feature_cache'
+
+    sod_original_img_dir = r"F:\lee\SODandSED\SOD_IMAGE\src"
+    sod_binary_img_dir = r"F:\lee\SODandSED\SOD_IMAGE\SOD_gt2"
+    sod_general300_cache_out_dir = r'F:\lee\cache\cache_sod_general_kmeans_300\feature_cache'
+    sod_cache_out_dir = r'F:\lee\cache\cache_sod_features_local_surround_300\feature_cache'
 
     saliency_img_out_dir = r"F:\lee\saliency_map\out"
     saliency_feature_out_dir = r"F:\lee\predict_result"

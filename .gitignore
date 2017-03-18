@@ -3,6 +3,7 @@
 
 *.png
 *.txt
+*.csv
 .spyderproject
 .spyproject/
 
