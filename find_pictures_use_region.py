@@ -490,8 +490,8 @@ def print_max_score_multiprocess(max_score, cache_dir, max_interation=100, pic_n
         if score > max_score.value:
             max_score.value = score
             max_score_image_list = features_img
-            print "max score is: " + str(max_score.value) + " picture list: " + str(max_score_image_list) + " i:" +str(i)
-        # print "score is: " + str(score) + " picture list: " + str(features_img)
+            # print "max score is: " + str(max_score.value) + " picture list: " + str(max_score_image_list) + " i:" +str(i)
+            print str(max_score.value) + ':' + str(max_score_image_list)
 
 
 def print_all_score(cache_dir, C=10, iter=None):

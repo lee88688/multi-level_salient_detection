@@ -2366,10 +2366,6 @@ def local_contrast(features, segments, neighbors):
         mask = np.any(neighbors[x[neighbors[i, :]], :], axis=0)
         n[i, :] |= mask
     neighbors = n
-    border_sp = np.unique(np.concatenate([segments[0, :], segments[segments.shape[0]-1, :], segments[:, 0], segments[:, segments.shape[1] - 1]]))
-    for i in border_sp:
-        neighbors[i, border_sp] = True
-    # neighbors |= neighbors.T
     neighbors[np.eye(neighbors.shape[0], dtype=np.bool)] = False
 
     img_segments_mean = features
