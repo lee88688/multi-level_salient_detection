@@ -5,10 +5,10 @@ import smtplib
 
 
 def send_mail(body, subject='result summary', debug=False):
-    to_addr = 'lee88688@163.com'
-    password = 'ngkfdngqkttcbebe'
-    smtp_server = 'smtp.qq.com'
-    from_addr = '540188688@qq.com'
+    to_addr = ''
+    password = ''
+    smtp_server = ''
+    from_addr = ''
 
     msg = MIMEText(body, 'plain', 'utf-8')
     msg['subject'] = subject
